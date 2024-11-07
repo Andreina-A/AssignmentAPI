@@ -1,0 +1,83 @@
+---
+title: "Assignment_API"
+author: "Andreina A"
+date: "2024-11-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(jsonlite)
+library(httr)
+library(data.table)
+```
+
+## Assignment 9
+
+The New York Times web site provides a rich set of APIs, as described here: https://developer.nytimes.com/apis
+You’ll need to start by signing up for an API key.
+Your task is to choose one of the New York Times APIs, construct an interface in R to read in the JSON data, and transform it into an R DataFrame.
+
+
+
+**The api data I used from NY times was on books by Stephen King. To obtained the data frame from the json file I used fromJSON function, and the class function to identify the data frame within the json file. To start, I recreated the URL link to hide my API key using the paste0 function and I hide my api key into my environment by creating a variable api_key.**
+
+```{r}
+api_key <- Sys.getenv("NYTIMES_API_KEY")
+NYT<-"https://api.nytimes.com/svc/books/v3/reviews.json?author=Stephen+King&api-key="
+Full<-paste0(NYT,api_key) #paste0 function creates a string from the NYTI and api_key with no spaces in between 
+```
+
+
+```{r}
+url<-fromJSON(Full, flatten= TRUE)
+
+Book_SK<-url$results #obtaining data frame from file
+class(Book_SK)
+```
+
+## Data frame
+
+**Using the data table function to create a table from the data frame.**
+
+```{r}
+Book_table<-data.table(Book_SK)
+Book_table
+```
+
+# Analysis
+
+I wanted to see how many books Stephen King published by year, I used the format function to extract the year from the published dates and created a columns for the years. To tidy the data I created primary keys, in order to normalize the data and create a separate table with the book date published and year.
+
+```{r}
+Book_SK <- rowid_to_column(Book_SK, "ID") #Primary key for the published date for each book
+head(Book_SK)
+
+Yr_pub<-subset(Book_SK, select = c(ID, publication_dt))
+Yr_pub$year<-format(as.Date(Yr_pub$publication_dt, format = "%Y-%m-%d"), "%Y")
+head(Yr_pub)
+```
+
+
+Bar graph of with the amount of books Stephen King published each year.
+
+```{r}
+ggplot(Yr_pub, aes(x=year), stat='count')+
+  geom_bar()
+```
+
+Year with the max counts of books
+
+```{r}
+Yr_pub%>% group_by(year)%>% summarise(count=n())%>%
+  slice(which.max(count))#grouped by year to aggregate the occurrences of the years and used the which max to find the year with the max published books, the slice function was used to select the row with the max value.
+```
+
+
+
+
+## Conclusion
+
+**I was able to access and load the api data from New York Times, and create a data frame the json file. By creating a variable into the environment of R I was able to hide my api key, and load the url with my api key hidden. In this assignment I learned how to create api keys and how to use them to load the data into R without having to download the data and upload it into R. Using the API data from NY times and R, I was able to find the year that Stephan King published the most books which was 1987 he published 5 books.**
+
+
